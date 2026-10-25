@@ -1,0 +1,8 @@
+{
+  "name": "Remix Boss URL Shortener 1",
+  "description": "Production-ready enterprise URL Shortener SaaS with Boss VPS backend integration, analytics, custom domains, and team management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
