@@ -60,14 +60,25 @@ import {
   User as FirebaseUser
 } from './firebase.ts';
 import { api, LinkItem, User, DomainItem, AnalyticsData } from './api/client.ts';
+import { SeoHead } from './components/SeoHead.tsx';
+import { SeoLandingPage } from './components/SeoLandingPage.tsx';
+import { BlogHub } from './components/BlogHub.tsx';
+import { BlogArticlePage } from './components/BlogArticlePage.tsx';
+import { TrustPages } from './components/TrustPages.tsx';
+import { Footer } from './components/Footer.tsx';
+import { LANDING_PAGES } from './data/landingPages.ts';
+import { BLOG_ARTICLES, BlogArticle } from './data/blogArticles.ts';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Top-level Navigation: 'home' | 'dashboard' | 'admin' | 'login' | 'signup' | 'pricing'
-  const [view, setView] = useState<'home' | 'dashboard' | 'admin' | 'login' | 'signup' | 'pricing'>('home');
+  // Top-level Navigation: 'home' | 'dashboard' | 'admin' | 'login' | 'signup' | 'pricing' | 'landing' | 'blog' | 'blog-article' | 'about' | 'contact' | 'privacy' | 'terms' | 'abuse'
+  const [view, setView] = useState<string>('home');
+  const [activeLandingSlug, setActiveLandingSlug] = useState<string>('url-shortener');
+  const [activeBlogSlug, setActiveBlogSlug] = useState<string>('what-is-a-url-shortener');
+
   // User Dashboard Tabs: 'shorten' | 'links' | 'analytics' | 'domains' | 'package'
   const [userTab, setUserTab] = useState<'shorten' | 'links' | 'analytics' | 'domains' | 'package'>('shorten');
   // Admin Panel Tabs: 'overview' | 'users' | 'links' | 'domains' | 'packages' | 'analytics' | 'settings' | 'health'
@@ -188,10 +199,22 @@ export default function App() {
     }
   }[lang];
 
-  const navigateTo = (targetView: 'home' | 'dashboard' | 'admin' | 'login' | 'signup' | 'pricing', path = '/') => {
-    setView(targetView);
+  const navigateTo = (targetView: string, path = '/') => {
+    if (targetView.startsWith('landing:')) {
+      const slug = targetView.replace('landing:', '');
+      setActiveLandingSlug(slug);
+      setView('landing');
+    } else if (targetView.startsWith('blog:')) {
+      const slug = targetView.replace('blog:', '');
+      setActiveBlogSlug(slug);
+      setView('blog-article');
+    } else {
+      setView(targetView);
+    }
+
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -208,6 +231,8 @@ export default function App() {
       }
 
       const path = window.location.pathname.toLowerCase();
+      const cleanPath = path.replace(/^\/+/, '');
+
       if (path.startsWith('/nachid/admin') || path.startsWith('/nachid') || path.startsWith('/admin')) {
         setView('admin');
         if (path.includes('/users')) setAdminTab('users');
@@ -230,12 +255,53 @@ export default function App() {
         setView('signup');
       } else if (path === '/pricing') {
         setView('pricing');
+      } else if (LANDING_PAGES[cleanPath]) {
+        setActiveLandingSlug(cleanPath);
+        setView('landing');
+      } else if (path === '/blog') {
+        setView('blog');
+      } else if (path.startsWith('/blog/')) {
+        const articleSlug = cleanPath.replace('blog/', '');
+        if (BLOG_ARTICLES.some(a => a.slug === articleSlug)) {
+          setActiveBlogSlug(articleSlug);
+          setView('blog-article');
+        } else {
+          setView('blog');
+        }
+      } else if (['about', 'contact', 'privacy', 'terms', 'abuse'].includes(cleanPath)) {
+        setView(cleanPath);
       }
 
       // Client-side shortcode redirect interceptor
       const rawPath = window.location.pathname.replace(/^\/+/, '').split('/')[0];
-      const knownSpaRoutes = ['', 'dashboard', 'admin', 'pricing', 'api', 'assets', 'nachid', 'login', 'signup'];
-      if (rawPath && !knownSpaRoutes.includes(rawPath) && /^[a-zA-Z0-9_-]{3,32}$/.test(rawPath)) {
+      const knownSpaRoutes = [
+        '',
+        'dashboard',
+        'admin',
+        'pricing',
+        'api',
+        'assets',
+        'nachid',
+        'login',
+        'signup',
+        'url-shortener',
+        'free-url-shortener',
+        'link-shortener',
+        'short-url-generator',
+        'custom-url-shortener',
+        'branded-url-shortener',
+        'url-shortener-with-analytics',
+        'bulk-url-shortener',
+        'qr-code-generator',
+        'blog',
+        'about',
+        'contact',
+        'privacy',
+        'terms',
+        'abuse'
+      ];
+
+      if (rawPath && !knownSpaRoutes.includes(rawPath.toLowerCase()) && !rawPath.startsWith('blog') && /^[a-zA-Z0-9_-]{3,32}$/.test(rawPath)) {
         setRedirecting(true);
         // 1. Check local storage cache
         try {
@@ -629,20 +695,23 @@ export default function App() {
 
         {/* Zone 2: Navigation Links */}
         <nav className="flex items-center gap-4 md:gap-6 text-sm font-medium overflow-x-auto py-1">
-          <button onClick={() => setView('home')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navHome}</button>
+          <button onClick={() => navigateTo('home', '/')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'home' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navHome}</button>
+          <button onClick={() => navigateTo('landing:free-url-shortener', '/free-url-shortener')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'landing' && activeLandingSlug === 'free-url-shortener' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>Free Shortener</button>
+          <button onClick={() => navigateTo('landing:custom-url-shortener', '/custom-url-shortener')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'landing' && activeLandingSlug === 'custom-url-shortener' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>Custom Slugs</button>
+          <button onClick={() => navigateTo('blog', '/blog')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'blog' || view === 'blog-article' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>Guides</button>
+          <button onClick={() => navigateTo('pricing', '/pricing')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'pricing' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navPricing}</button>
           {currentUser && (
-            <button onClick={() => setView('dashboard')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'dashboard' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navDashboard}</button>
+            <button onClick={() => navigateTo('dashboard', '/dashboard')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'dashboard' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navDashboard}</button>
           )}
           {currentUser?.role === 'admin' && (
             <button
-              onClick={() => setView('admin')}
+              onClick={() => navigateTo('admin', '/nachid/admin')}
               className={`hover:text-rose-400 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${view === 'admin' ? 'text-rose-400 font-semibold' : 'text-slate-500'}`}
             >
               <Shield className="w-3.5 h-3.5 text-rose-500" />
               <span>{t.navAdmin}</span>
             </button>
           )}
-          <button onClick={() => setView('pricing')} className={`hover:text-indigo-500 transition-colors whitespace-nowrap shrink-0 ${view === 'pricing' ? 'text-indigo-500 font-semibold' : 'text-slate-500'}`}>{t.navPricing}</button>
         </nav>
 
         {/* Zone 3: Primary Action & Utilities */}
@@ -692,6 +761,43 @@ export default function App() {
         {/* VIEW 1: LANDING PAGE */}
         {view === 'home' && (
           <div className="space-y-16">
+            <SeoHead
+              title="URL Shortener - Free Short Link Generator | Boss URL Shortener"
+              description="Shorten long URLs instantly with Boss URL Shortener. Create clean, shareable short links and manage your links with easy-to-use tools."
+              canonicalPath="/"
+              schema={[
+                {
+                  '@context': 'https://schema.org',
+                  '@type': 'Organization',
+                  name: 'Boss URL Shortener',
+                  url: 'https://urlshort.nasirdigitalhub.com/',
+                  logo: 'https://urlshort.nasirdigitalhub.com/assets/aistudio/image_0b1e7d27.png'
+                },
+                {
+                  '@context': 'https://schema.org',
+                  '@type': 'WebSite',
+                  name: 'Boss URL Shortener',
+                  url: 'https://urlshort.nasirdigitalhub.com/',
+                  potentialAction: {
+                    '@type': 'SearchAction',
+                    target: 'https://urlshort.nasirdigitalhub.com/free-url-shortener?url={search_term_string}',
+                    'query-input': 'required name=search_term_string'
+                  }
+                },
+                {
+                  '@context': 'https://schema.org',
+                  '@type': 'SoftwareApplication',
+                  name: 'Boss URL Shortener',
+                  applicationCategory: 'UtilitiesApplication',
+                  operatingSystem: 'All',
+                  offers: {
+                    '@type': 'Offer',
+                    price: '0',
+                    priceCurrency: 'USD'
+                  }
+                }
+              ]}
+            />
             <div className="text-center max-w-3xl mx-auto pt-12 pb-8 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5" />
@@ -991,6 +1097,62 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* VIEW 1.5: SEO INTENT LANDING PAGES */}
+        {view === 'landing' && LANDING_PAGES[activeLandingSlug] && (
+          <SeoLandingPage
+            config={LANDING_PAGES[activeLandingSlug]}
+            activeHost={activeHost}
+            theme={theme}
+            lang={lang}
+            onNavigate={navigateTo}
+            onOpenQrModal={(url) => setQrModalLink(url)}
+            onLinkCreated={(newLink) => {
+              if (newLink?.shortCode) {
+                try {
+                  const stored = localStorage.getItem('boss_guest_links');
+                  const existing: LinkItem[] = stored ? JSON.parse(stored) : [];
+                  const updated = [newLink, ...existing.filter(l => l.id !== newLink.id)].slice(0, 50);
+                  localStorage.setItem('boss_guest_links', JSON.stringify(updated));
+                  setGuestLinks(updated);
+                } catch (e) {}
+              }
+            }}
+          />
+        )}
+
+        {/* VIEW 1.6: TOPICAL AUTHORITY BLOG HUB */}
+        {view === 'blog' && (
+          <BlogHub
+            theme={theme}
+            onNavigate={navigateTo}
+            onSelectArticle={(slug) => navigateTo(`blog:${slug}`, `/blog/${slug}`)}
+          />
+        )}
+
+        {/* VIEW 1.7: EDUCATIONAL BLOG ARTICLE */}
+        {view === 'blog-article' && (
+          (() => {
+            const article = BLOG_ARTICLES.find(a => a.slug === activeBlogSlug) || BLOG_ARTICLES[0];
+            return (
+              <BlogArticlePage
+                article={article}
+                theme={theme}
+                onNavigate={navigateTo}
+                onSelectArticle={(slug) => navigateTo(`blog:${slug}`, `/blog/${slug}`)}
+              />
+            );
+          })()
+        )}
+
+        {/* VIEW 1.8: TRUST, COMPLIANCE & SUPPORT PAGES */}
+        {['about', 'contact', 'privacy', 'terms', 'abuse'].includes(view) && (
+          <TrustPages
+            pageType={view as any}
+            theme={theme}
+            onNavigate={navigateTo}
+          />
         )}
 
         {/* VIEW 2: USER DASHBOARD (Restricted to User's Own Records) */}
@@ -2149,16 +2311,12 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`mt-20 border-t py-8 px-6 text-center text-xs text-slate-500 ${theme === 'dark' ? 'border-slate-900 bg-slate-950' : 'border-slate-200 bg-white'}`}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>© {new Date().getFullYear()} Boss URL Shortener SaaS (urlshort.nasirdigitalhub.com). All rights reserved.</div>
-          <div className="flex items-center gap-4">
-            <span>VPS Backend: 107.174.37.180</span>
-            <span aria-hidden="true">·</span>
-            <span>Firebase: urlshort-1c52b</span>
-          </div>
-        </div>
-      </footer>
+      <Footer
+        theme={theme}
+        lang={lang}
+        onNavigate={navigateTo}
+        onToggleLang={() => setLang(lang === 'en' ? 'bn' : 'en')}
+      />
     </div>
   );
 }
