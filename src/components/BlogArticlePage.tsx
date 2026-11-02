@@ -11,6 +11,7 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { BlogArticle, BLOG_ARTICLES } from '../data/blogArticles.ts';
+import { autoLinkContent } from '../data/internalLinking.ts';
 import { SeoHead } from './SeoHead.tsx';
 
 interface BlogArticlePageProps {
@@ -188,9 +189,7 @@ export const BlogArticlePage: React.FC<BlogArticlePageProps> = ({
             );
           }
           return (
-            <p key={idx} className={`${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-              {paragraph}
-            </p>
+            <p key={idx} className={`${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`} dangerouslySetInnerHTML={{ __html: autoLinkContent(paragraph) }} />
           );
         })}
       </article>
