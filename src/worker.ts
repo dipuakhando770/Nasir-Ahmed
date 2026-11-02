@@ -357,12 +357,20 @@ const SPA_HTML = `<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Boss URL Shortener — Enterprise URL Shortening SaaS</title>
-    <meta name="description" content="Production-ready enterprise URL Shortener SaaS with Boss VPS backend integration, analytics, custom domains, and team management." />
-    <meta property="og:title" content="Boss URL Shortener — Enterprise URL Shortening SaaS" />
-    <meta property="og:description" content="Production-ready enterprise URL Shortener SaaS with Boss VPS backend integration, analytics, custom domains, and team management." />
+    <meta name="google-site-verification" content="nNC_6sZlQCSTbyCWAiIP__5d1jbVJGNqrxMtpZ64qMo" />
+    <title>URL Shortener - Free Short Link Generator | Boss URL Shortener</title>
+    <meta name="description" content="Shorten long URLs instantly with Boss URL Shortener. Create clean, shareable short links and manage your links with easy-to-use tools." />
+    <link rel="canonical" href="https://urlshort.nasirdigitalhub.com/" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Boss URL Shortener" />
+    <meta property="og:title" content="URL Shortener - Free Short Link Generator | Boss URL Shortener" />
+    <meta property="og:description" content="Shorten long URLs instantly with Boss URL Shortener. Create clean, shareable short links and manage your links with easy-to-use tools." />
+    <meta property="og:url" content="https://urlshort.nasirdigitalhub.com/" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="URL Shortener - Free Short Link Generator | Boss URL Shortener" />
+    <meta name="twitter:description" content="Shorten long URLs instantly with Boss URL Shortener. Create clean, shareable short links and manage your links with easy-to-use tools." />
+    <meta name="theme-color" content="#4f46e5" />
     <script type="module" crossorigin src="/assets/index-XSdyZhCh.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BG9jXY6F.css">
   </head>
@@ -414,7 +422,25 @@ export default {
       }
     }
 
-    // Serve SPA HTML for frontend client routes (/admin, /nachid/admin, /dashboard, /login, /signup, /pricing, /)
+    // Serve robots.txt
+    if (pathname === '/robots.txt') {
+      const robotsTxt = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\nDisallow: /nachid\nDisallow: /nachid/\nDisallow: /dashboard\nDisallow: /dashboard/\nDisallow: /api/\nDisallow: /login\nDisallow: /signup\n\nSitemap: https://urlshort.nasirdigitalhub.com/sitemap.xml\n`;
+      return new Response(robotsTxt, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', ...corsHeaders },
+      });
+    }
+
+    // Serve sitemap.xml
+    if (pathname === '/sitemap.xml') {
+      if (env.ASSETS) {
+        try {
+          const sitemapRes = await env.ASSETS.fetch(new Request(new URL('/sitemap.xml', request.url)));
+          if (sitemapRes.ok) return sitemapRes;
+        } catch {}
+      }
+    }
+
+    // Serve SPA HTML for frontend client routes
     const isAppFrontendRoute =
       pathname.startsWith('/admin') ||
       pathname.startsWith('/nachid') ||
@@ -422,6 +448,21 @@ export default {
       pathname.startsWith('/login') ||
       pathname.startsWith('/signup') ||
       pathname.startsWith('/pricing') ||
+      pathname.startsWith('/url-shortener') ||
+      pathname.startsWith('/free-url-shortener') ||
+      pathname.startsWith('/link-shortener') ||
+      pathname.startsWith('/short-url-generator') ||
+      pathname.startsWith('/custom-url-shortener') ||
+      pathname.startsWith('/branded-url-shortener') ||
+      pathname.startsWith('/url-shortener-with-analytics') ||
+      pathname.startsWith('/bulk-url-shortener') ||
+      pathname.startsWith('/qr-code-generator') ||
+      pathname.startsWith('/blog') ||
+      pathname.startsWith('/about') ||
+      pathname.startsWith('/contact') ||
+      pathname.startsWith('/privacy') ||
+      pathname.startsWith('/terms') ||
+      pathname.startsWith('/abuse') ||
       pathname === '/';
 
     if (isAppFrontendRoute && !pathname.startsWith('/api/')) {
@@ -673,8 +714,35 @@ export default {
 
     // Redirect handler for short code /:code
     const shortCodeMatch = pathname.match(/^\/([a-zA-Z0-9_-]{3,32})$/);
-    const knownAppRoutes = ['dashboard', 'admin', 'pricing', 'api', 'assets', 'cf-cache'];
-    if (shortCodeMatch && !knownAppRoutes.includes(shortCodeMatch[1])) {
+    const knownAppRoutes = [
+      'dashboard',
+      'admin',
+      'pricing',
+      'api',
+      'assets',
+      'cf-cache',
+      'nachid',
+      'login',
+      'signup',
+      'url-shortener',
+      'free-url-shortener',
+      'link-shortener',
+      'short-url-generator',
+      'custom-url-shortener',
+      'branded-url-shortener',
+      'url-shortener-with-analytics',
+      'bulk-url-shortener',
+      'qr-code-generator',
+      'blog',
+      'about',
+      'contact',
+      'privacy',
+      'terms',
+      'abuse',
+      'robots.txt',
+      'sitemap.xml'
+    ];
+    if (shortCodeMatch && !knownAppRoutes.includes(shortCodeMatch[1].toLowerCase()) && !shortCodeMatch[1].startsWith('blog')) {
       const code = shortCodeMatch[1];
       const link = await lookupLink(code, request.url, env);
       if (link && (link.originalUrl || link.original_url)) {
@@ -696,7 +764,15 @@ export default {
           if (ctx?.waitUntil) ctx.waitUntil(clickOp);
         }
 
-        return Response.redirect(destination, 302);
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': destination,
+            'X-Robots-Tag': 'noindex, nofollow',
+            'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+            ...corsHeaders
+          }
+        });
       }
     }
 

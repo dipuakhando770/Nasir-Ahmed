@@ -9,6 +9,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json());
 
+// Security & Crawl Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 const PORT = process.env.PORT || 3000;
 const VPS_API_BASE_URL = process.env.BOSS_VPS_API_BASE_URL || 'http://107.174.37.180';
 
@@ -856,27 +864,76 @@ app.get('/api/links/resolve/:code', (req, res) => {
   return res.status(404).json({ success: false, error: 'Short link not found' });
 });
 
+// Explicit robots.txt & sitemap.xml routes
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.resolve(__dirname, 'public', 'robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.type('application/xml');
+  res.sendFile(path.resolve(__dirname, 'public', 'sitemap.xml'));
+});
+
 // Short Link Redirect Route (`/:code`)
 app.get('/:code', (req, res, next) => {
-  const code = req.params.code;
-  const knownSpaRoutes = ['dashboard', 'admin', 'pricing', 'api', 'assets'];
-  if (knownSpaRoutes.includes(code) || code.startsWith('api') || code.startsWith('assets') || code.includes('.')) {
+  const code = req.params.code.toLowerCase();
+  const knownSpaRoutes = [
+    'dashboard',
+    'admin',
+    'pricing',
+    'api',
+    'assets',
+    'nachid',
+    'login',
+    'signup',
+    'url-shortener',
+    'free-url-shortener',
+    'link-shortener',
+    'short-url-generator',
+    'custom-url-shortener',
+    'branded-url-shortener',
+    'url-shortener-with-analytics',
+    'bulk-url-shortener',
+    'qr-code-generator',
+    'blog',
+    'about',
+    'contact',
+    'privacy',
+    'terms',
+    'abuse',
+    'robots.txt',
+    'sitemap.xml',
+    'favicon.ico'
+  ];
+
+  if (
+    knownSpaRoutes.includes(code) ||
+    code.startsWith('api') ||
+    code.startsWith('assets') ||
+    code.startsWith('blog') ||
+    code.includes('.')
+  ) {
     return next();
   }
 
-  const link = links.find(l => l.shortCode === code);
+  const link = links.find(l => l.shortCode.toLowerCase() === code);
   if (!link) {
     return res.status(404).send(`
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Link Not Found — Boss URL Shortener</title>
+        <meta name="robots" content="noindex, nofollow" />
         <style>
-          body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-          .card { background: #1e293b; padding: 2.5rem; border-radius: 1rem; text-align: center; max-width: 400px; border: 1px solid #334155; }
-          h1 { color: #f43f5e; margin-bottom: 0.5rem; }
-          p { color: #94a3b8; margin-bottom: 1.5rem; }
-          a { background: #6366f1; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; }
+          body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; box-sizing: border-box; }
+          .card { background: #1e293b; padding: 2.5rem; border-radius: 1rem; text-align: center; max-width: 440px; border: 1px solid #334155; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+          h1 { color: #f43f5e; margin: 0 0 0.5rem 0; font-size: 1.75rem; }
+          p { color: #94a3b8; margin-bottom: 1.75rem; font-size: 0.95rem; line-height: 1.5; }
+          a { background: #6366f1; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-block; transition: background 0.2s; }
+          a:hover { background: #4f46e5; }
         </style>
       </head>
       <body>
@@ -907,7 +964,11 @@ app.get('/:code', (req, res, next) => {
     device
   });
 
-  // Redirect to user's intended original destination, avoiding loops
+  // Short URL Indexing & Crawl Management: Never allow search engines to index temporary short redirects
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+
+  // Redirect to user's intended original destination
   const destination = link.originalUrl;
   return res.redirect(302, destination);
 });

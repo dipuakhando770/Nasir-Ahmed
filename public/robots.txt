@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /nachid
+Disallow: /nachid/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /login
+Disallow: /signup
+
+# Do not index search results or transient API endpoints
+Disallow: /*?search=*
+
+# Sitemap location
+Sitemap: https://urlshort.nasirdigitalhub.com/sitemap.xml
